@@ -544,6 +544,8 @@ game/srf/media/viewed.res
 .ninja_log
 compile_commands.json
 
+.vscode/*
+
 
 
 src/lib/public/linux64/mathlib.a
