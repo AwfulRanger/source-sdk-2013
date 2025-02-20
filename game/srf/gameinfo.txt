@@ -1,0 +1,63 @@
+"GameInfo" {
+	
+	"game" "Ribbiting Fortress"
+	"type" "multiplayer_only"
+	"nomodels" "1"
+	"nohimodel" "1"
+	"nocrosshair" "0"
+	"hidden_maps" {
+		
+		"test_speakers" "1"
+		"test_hardware" "1"
+		
+	}
+	"nodegraph" "0"
+	"GameData" "tf.fgd"
+	"AdditionalLocalization" "tf"
+	"InstancePath" "maps/instances/"
+	"advcrosshair" "1"
+	"supportsvr" "0"
+	"ReplayRequired" "1"
+	
+	"DependsOnAppID" "440"
+	
+	"FileSystem" {
+		
+		"SteamAppId" "243750"
+		"SearchPaths" {
+			
+			// custom user content
+			"game+mod+custom_mod" "srf/custom/*"
+			//"game+mod+custom_mod" "|appid_440|tf/custom/*"
+			
+			// loose files
+			"mod+mod_write" "|gameinfo_path|."
+			"game+game_write" "|gameinfo_path|."
+			"default_write_path" "|gameinfo_path|."
+			"gamebin" "|gameinfo_path|bin"
+			
+			// vpk files
+			"game_lv" "|appid_440|tf/tf2_lv.vpk"
+			"game+mod" "|appid_440|tf/tf2_textures.vpk"
+			"game+mod" "|appid_440|tf/tf2_sound_vo_english.vpk"
+			"game+mod" "|appid_440|tf/tf2_sound_misc.vpk"
+			"game+mod+vgui" "|appid_440|tf/tf2_misc.vpk"
+			"game" "|appid_243750|hl2/hl2_textures.vpk"
+			"game" "|appid_243750|hl2/hl2_sound_vo_english.vpk"
+			"game" "|appid_243750|hl2/hl2_sound_misc.vpk"
+			"game+vgui" "|appid_243750|hl2/hl2_misc.vpk"
+			"platform+vgui" "|appid_243750|platform/platform_misc.vpk"
+			
+			// base loose files
+			"game" "|appid_440|tf"
+			"game" "|appid_243750|hl2"
+			"platform" "|appid_243750|platform"
+			
+			// downloads
+			"game+download" "srf/download"
+			
+		}
+		
+	}
+	
+}

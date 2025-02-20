@@ -1,0 +1,37 @@
+"UnlitGeneric" {
+	
+	"$basetexture" "logo/srf_logo"
+	"$translucent" "1"
+	"$ignorez" "1"
+	
+	"$randomnum" "0"
+	"$randomframe" "0"
+	"$randomsub" "1"
+	
+	"Proxies" {
+		
+		"UniformNoise" {
+			
+			"minVal" "1"
+			"maxVal" "5"
+			"resultVar" "$randomnum"
+			
+		}
+		"SelectFirstIfNonZero" {
+			
+			"srcVar1" "$randomframe"
+			"srcVar2" "$randomnum"
+			"resultVar" "$randomframe"
+			
+		}
+		"Subtract" {
+			
+			"srcVar1" "$randomframe"
+			"srcVar2" "$randomsub"
+			"resultVar" "$frame"
+			
+		}
+		
+	}
+	
+}
