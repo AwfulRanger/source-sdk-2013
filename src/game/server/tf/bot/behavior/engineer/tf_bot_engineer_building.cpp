@@ -70,6 +70,8 @@ void CTFBotEngineerBuilding::UpgradeAndMaintainBuildings( CTFBot *me )
 {
 	CObjectSentrygun *mySentry = (CObjectSentrygun *)me->GetObjectOfType( OBJ_SENTRYGUN );
 	CObjectDispenser *myDispenser = (CObjectDispenser *)me->GetObjectOfType( OBJ_DISPENSER );
+	CObjectTeleporter *myEntrance = (CObjectTeleporter *)me->GetObjectOfType( OBJ_TELEPORTER, MODE_TELEPORTER_ENTRANCE );
+	CObjectTeleporter *myExit = (CObjectTeleporter *)me->GetObjectOfType( OBJ_TELEPORTER, MODE_TELEPORTER_EXIT );
 
 	if ( !mySentry )
 	{
@@ -116,6 +118,61 @@ void CTFBotEngineerBuilding::UpgradeAndMaintainBuildings( CTFBot *me )
 		}
 
 		return;
+	}
+
+	// upgrade/repair teleporters if we have metal, everything else is max level, and sentry is safe
+	// (only do this outside of mvm just in case)
+	if ( !TFGameRules()->IsPVEModeActive() && myEntrance && myExit && ( ( myEntrance->GetUpgradeLevel() < 3 && myExit->GetUpgradeLevel() < 3 ) || myEntrance->GetHealth() < myEntrance->GetMaxHealth() - 10 || myExit->GetHealth() < myExit->GetMaxHealth() - 10 ) )
+	{
+		bool hasMetal = me->GetActiveTFWeapon() && me->GetActiveTFWeapon()->GetWeaponID() == TF_WEAPON_WRENCH && !me->IsAmmoLow();
+		bool sentrySafe = mySentry->GetTimeSinceLastInjury() >= 5.0f && mySentry->GetHealth() >= mySentry->GetMaxHealth();
+		bool restUpgraded = mySentry->GetUpgradeLevel() >= 3 && myDispenser->GetUpgradeLevel() >= 3;
+		if ( hasMetal && sentrySafe && restUpgraded )
+		{
+			// find the closest teleporter
+			CObjectTeleporter *myTeleporter = NULL;
+			float rangeToEntrance = me->GetDistanceBetween( myEntrance );
+			float rangeToExit = me->GetDistanceBetween( myExit );
+			float rangeToTeleporter;
+			if ( rangeToEntrance < rangeToExit )
+			{
+				myTeleporter = myEntrance;
+				rangeToTeleporter = rangeToEntrance;
+			}
+			else
+			{
+				myTeleporter = myExit;
+				rangeToTeleporter = rangeToExit;
+			}
+
+			if ( rangeToTeleporter < 1.2f * tooFarRange )
+			{
+				// crouch to make hitting the teleporter easier, but also to slow us down so we hit our move goal more accurately
+				me->PressCrouchButton();
+			}
+
+			if ( rangeToTeleporter > tooFarRange )
+			{
+				if ( m_repathTimer.IsElapsed() )
+				{
+					m_repathTimer.Start( RandomFloat( 1.0f, 2.0f ) );
+
+					CTFBotPathCost cost( me, FASTEST_ROUTE );
+					m_path.Compute( me, myTeleporter->GetAbsOrigin(), cost );
+				}
+
+				m_path.Update( me );
+			}
+			else
+			{
+				// we are in position - work on our buildings
+				me->StopLookingAroundForEnemies();
+				me->GetBodyInterface()->AimHeadTowards( myTeleporter->WorldSpaceCenter(), IBody::CRITICAL, 1.0f, NULL, "Work on my Teleporter" );
+				me->PressFireButton();
+			}
+
+			return;
+		}
 	}
 
 	// sit near both buildings
