@@ -534,6 +534,7 @@ game/srf/videoconfig_*.cfg
 game/srf/voice_ban.dt
 
 game/srf/maps/graphs/*
+game/srf/maps/*.nav
 
 game/srf/media/viewed.res
 
