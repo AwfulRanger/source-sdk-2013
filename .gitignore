@@ -538,6 +538,8 @@ game/srf/maps/*.nav
 
 game/srf/media/viewed.res
 
+game/srf/screenshots/*
+
 
 
 .ninja_deps
