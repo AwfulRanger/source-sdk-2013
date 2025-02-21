@@ -273,6 +273,7 @@ int g_iScopeDustTextureID = 0;
 #endif
 
 ConVar tf_weapon_criticals( "tf_weapon_criticals", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Whether or not random crits are enabled" );
+ConVar tf_weapon_criticals_mini( "tf_weapon_criticals_mini", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Chance of a random crit being a minicrit instead" );
 
 //=============================================================================
 //
@@ -309,6 +310,7 @@ CTFWeaponBase::CTFWeaponBase()
 	m_flEffectBarRegenTime = 0;
 	m_bCurrentAttackIsCrit = false;
 	m_bCurrentCritIsRandom = false;
+	m_bCurrentCritIsMini = false;
 	m_bCurrentAttackIsDuringDemoCharge = false;
 	m_iCurrentSeed = -1;
 	m_flReloadPriorNextFire = 0;
@@ -1530,6 +1532,7 @@ void CTFWeaponBase::CalcIsAttackCritical( void)
 
 	if ( (TFGameRules()->State_Get() == GR_STATE_TEAM_WIN) && (TFGameRules()->GetWinningTeam() == pPlayer->GetTeamNumber()) )
 	{
+		m_bCurrentCritIsMini = false;
 		m_bCurrentAttackIsCrit = true;
 	}
 	else if ( !AreRandomCritsEnabled() )
@@ -1549,6 +1552,8 @@ void CTFWeaponBase::CalcIsAttackCritical( void)
 //-----------------------------------------------------------------------------
 bool CTFWeaponBase::CalcIsAttackCriticalHelperNoCrits()
 {
+	m_bCurrentCritIsMini = false;
+	
 	CTFPlayer *pPlayer = ToTFPlayer( GetPlayerOwner() );
 	if ( !pPlayer )
 		return false;
@@ -1587,7 +1592,10 @@ bool CTFWeaponBase::CalcIsAttackCriticalHelper()
 
 	// Crit boosted players fire all crits
 	if ( pPlayer->m_Shared.IsCritBoosted() )
+	{
+		m_bCurrentCritIsMini = false;
 		return true;
+	}
 
 	// For rapid fire weapons, allow crits while period is active
 	bool bRapidFire = m_pWeaponInfo->GetWeaponData( m_iWeaponMode ).m_bUseRapidFireCrits;
@@ -1616,6 +1624,7 @@ bool CTFWeaponBase::CalcIsAttackCriticalHelper()
 
 	bool bCrit = false;
 	m_bCurrentCritIsRandom = true;
+	//m_bCurrentCritIsMini = false; // resetting this when there's no random crit can mess with projectile crits
 	int iRandom = 0;
 
 	if ( bRapidFire )
@@ -1740,6 +1749,10 @@ bool CTFWeaponBase::CalcIsAttackCriticalHelper()
 
 			bCrit = IsAllowedToWithdrawFromCritBucket( flDamage );
 		}
+
+		float flMiniChance = tf_weapon_criticals_mini.GetFloat();
+		iRandom = RandomInt( 0, WEAPON_RANDOM_RANGE - 1 );
+		m_bCurrentCritIsMini = iRandom < flMiniChance * WEAPON_RANDOM_RANGE;
 
 		if ( bCrit && bRapidFire )
 		{

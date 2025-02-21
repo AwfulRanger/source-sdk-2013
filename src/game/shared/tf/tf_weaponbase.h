@@ -361,6 +361,8 @@ class CTFWeaponBase : public CBaseCombatWeapon, public IHasOwner, public IHasGen
 	virtual bool CalcIsAttackCriticalHelperNoCrits();
 	bool IsCurrentAttackACrit() const { return m_bCurrentAttackIsCrit; }
 	bool IsCurrentAttackARandomCrit() const { return m_bCurrentAttackIsCrit && m_bCurrentCritIsRandom; }
+	bool IsCurrentAttackARandomMiniCrit() const { return m_bCurrentAttackIsCrit && m_bCurrentCritIsRandom && m_bCurrentCritIsMini; }
+	bool IsCurrentCritAMini() const { return m_bCurrentCritIsMini; }
 	bool IsCurrentAttackDuringDemoCharge() const { return m_bCurrentAttackIsDuringDemoCharge; }
 	virtual ETFDmgCustom GetPenetrateType() const;
 	virtual void GetProjectileFireSetup( CTFPlayer *pPlayer, Vector vecOffset, Vector *vecSrc, QAngle *angForward, bool bHitTeammates = true, float flEndDist = 2000.f );
@@ -688,6 +690,7 @@ protected:
 	bool			m_bInAttack2;
 	bool			m_bCurrentAttackIsCrit;
 	bool			m_bCurrentCritIsRandom;
+	bool			m_bCurrentCritIsMini;
 	bool			m_bCurrentAttackIsDuringDemoCharge;
 
 	EWeaponStrangeType_t			m_eStrangeType;

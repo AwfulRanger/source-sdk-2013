@@ -24,6 +24,7 @@
 #endif
 
 ConVar tf_weapon_criticals_melee( "tf_weapon_criticals_melee", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Controls random crits for melee weapons. 0 - Melee weapons do not randomly crit. 1 - Melee weapons can randomly crit only if tf_weapon_criticals is also enabled. 2 - Melee weapons can always randomly crit regardless of the tf_weapon_criticals setting." );
+ConVar tf_weapon_criticals_melee_mini( "tf_weapon_criticals_melee_mini", "1", FCVAR_REPLICATED | FCVAR_NOTIFY, "Chance of a melee random crit being a minicrit instead" );
 
 //=============================================================================
 //
@@ -205,7 +206,7 @@ void CTFWeaponBaseMelee::PrimaryAttack()
 
 	m_bCurrentAttackIsDuringDemoCharge = pPlayer->m_Shared.GetNextMeleeCrit() != MELEE_NOCRIT;
 
-	if ( pPlayer->m_Shared.GetNextMeleeCrit() == MELEE_MINICRIT )
+	if ( pPlayer->m_Shared.GetNextMeleeCrit() == MELEE_MINICRIT || IsCurrentAttackARandomMiniCrit() )
 	{
 		m_bMiniCrit = true;
 	}
@@ -1054,6 +1055,7 @@ bool CTFWeaponBaseMelee::CalcIsAttackCriticalHelperNoCrits( void )
 
 	if ( pPlayer->m_Shared.GetNextMeleeCrit() == MELEE_CRIT )
 	{
+		m_bCurrentCritIsMini = false;
 		return true;
 	}
 	else
@@ -1082,7 +1084,10 @@ bool CTFWeaponBaseMelee::CalcIsAttackCriticalHelper( void )
 
 	// Crit boosted players fire all crits
 	if ( pPlayer->m_Shared.IsCritBoosted() )
+	{
+		m_bCurrentCritIsMini = false;
 		return true;
+	}
 
 	float flPlayerCritMult = pPlayer->GetCritMult();
 	float flCritChance = TF_DAMAGE_CRIT_CHANCE_MELEE * flPlayerCritMult;
@@ -1101,6 +1106,7 @@ bool CTFWeaponBaseMelee::CalcIsAttackCriticalHelper( void )
 
 	if ( pPlayer->m_Shared.GetNextMeleeCrit() == MELEE_CRIT )
 	{
+		m_bCurrentCritIsMini = false;
 		return true;
 	}
 
@@ -1113,6 +1119,7 @@ bool CTFWeaponBaseMelee::CalcIsAttackCriticalHelper( void )
 	m_nCritChecks++;
 
 	bool bCrit = ( RandomInt( 0, WEAPON_RANDOM_RANGE-1 ) < ( flCritChance ) * WEAPON_RANDOM_RANGE );
+	m_bCurrentCritIsMini = false;
 
 #ifdef _DEBUG
 	// Force seed to always say yes
@@ -1126,6 +1133,12 @@ bool CTFWeaponBaseMelee::CalcIsAttackCriticalHelper( void )
 	{
 		// Seed says crit.  Run it by the manager.
 		bCrit = IsAllowedToWithdrawFromCritBucket( flDamage );
+		if ( bCrit )
+		{
+			float flMiniChance = tf_weapon_criticals_melee_mini.GetFloat();
+			int iRandom = RandomInt( 0, WEAPON_RANDOM_RANGE - 1 );
+			m_bCurrentCritIsMini = iRandom < flMiniChance * WEAPON_RANDOM_RANGE;
+		}
 	}
 
 	return bCrit;

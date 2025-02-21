@@ -6489,9 +6489,9 @@ bool CTFGameRules::ApplyOnDamageModifyRules( CTakeDamageInfo &info, CBaseEntity 
 		// Minicrits still get short range damage bonus
 		bool bForceCritFalloff = ( bitsDamage & DMG_USEDISTANCEMOD ) && 
 								 ( ( bCrit && tf_weapon_criticals_distance_falloff.GetBool() ) || 
-								 ( info.GetCritType() == CTakeDamageInfo::CRIT_MINI && tf_weapon_minicrits_distance_falloff.GetBool() ) || 
+								 ( ( info.GetCritType() == CTakeDamageInfo::CRIT_MINI || ( bCrit && pWeapon && pWeapon->IsCurrentCritAMini() ) ) && tf_weapon_minicrits_distance_falloff.GetBool() ) || 
 								 ( iForceCritDmgFalloff ) );
-		bool bDoShortRangeDistanceIncrease = !bCrit || info.GetCritType() == CTakeDamageInfo::CRIT_MINI ;
+		bool bDoShortRangeDistanceIncrease = !bCrit || info.GetCritType() == CTakeDamageInfo::CRIT_MINI || ( bCrit && pWeapon && pWeapon->IsCurrentCritAMini() );
 		bool bDoLongRangeDistanceDecrease = !bIgnoreLongRangeDmgEffects && ( bForceCritFalloff || ( !bCrit && info.GetCritType() != CTakeDamageInfo::CRIT_MINI  ) );
 
 		// If we're doing any distance modification, we need to do that first
@@ -6724,7 +6724,7 @@ bool CTFGameRules::ApplyOnDamageModifyRules( CTakeDamageInfo &info, CBaseEntity 
 		{
 			int iDemoteCritToMinicrit = 0;
 			CALL_ATTRIB_HOOK_INT_ON_OTHER( pWeapon, iDemoteCritToMinicrit, crits_become_minicrits );
-			if ( iDemoteCritToMinicrit != 0 )
+			if ( iDemoteCritToMinicrit != 0 || ( pWeapon && pWeapon->IsCurrentCritAMini() ) )
 			{
 				bitsDamage &= ~DMG_CRITICAL; // this is to shutup the assert in lambdaDoMinicrit
 				lambdaDoMinicrit( true );
