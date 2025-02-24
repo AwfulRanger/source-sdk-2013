@@ -546,6 +546,8 @@ game/srf/screenshots/*
 .ninja_log
 compile_commands.json
 
+shell.nix
+
 .vscode/*
 
 
