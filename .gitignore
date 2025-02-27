@@ -519,11 +519,6 @@ srf_win64.exe
 
 
 
-game/srf/cfg/*
-!game/srf/cfg/config_default.cfg
-
-
-
 game/steam_appid.txt
 
 game/srf/GameState.txt
@@ -532,6 +527,12 @@ game/srf/stats.txt
 game/srf/tf2_playerstats.dmx
 game/srf/videoconfig_*.cfg
 game/srf/voice_ban.dt
+
+game/srf/cfg/*
+!game/srf/cfg/config_default.cfg
+
+game/srf/custom/*
+game/srf/download/*
 
 game/srf/maps/graphs/*
 game/srf/maps/*.nav

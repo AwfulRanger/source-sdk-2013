@@ -27,7 +27,7 @@
 		"SearchPaths" {
 			
 			// custom user content
-			"game+mod+custom_mod" "srf/custom/*"
+			"game+mod+custom_mod" "|gameinfo_path|custom/*"
 			//"game+mod+custom_mod" "|appid_440|tf/custom/*"
 			
 			// loose files
@@ -54,7 +54,7 @@
 			"platform" "|appid_243750|platform"
 			
 			// downloads
-			"game+download" "srf/download"
+			"game+download" "|gameinfo_path|download"
 			
 		}
 		
