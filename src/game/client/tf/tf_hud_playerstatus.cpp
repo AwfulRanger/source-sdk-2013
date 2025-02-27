@@ -41,6 +41,8 @@ ConVar cl_hud_playerclass_use_playermodel( "cl_hud_playerclass_use_playermodel",
 
 ConVar cl_hud_playerclass_playermodel_showed_confirm_dialog( "cl_hud_playerclass_playermodel_showed_confirm_dialog", "0", FCVAR_ARCHIVE | FCVAR_HIDDEN );
 
+ConVar tf_hud_max_health_threshold( "tf_hud_max_health_threshold", "5", FCVAR_ARCHIVE, "How much health should be missing before the HUD starts showing max health, -1 to always show" );
+
 extern ConVar tf_max_health_boost;
 
 
@@ -568,19 +570,13 @@ CTFHealthPanel::CTFHealthPanel( Panel *parent, const char *name ) : vgui::Panel(
 {
 	m_flHealth = 1.0f;
 
-	m_iMaterialIndex = surface()->DrawGetTextureId( "hud/health_color" );
-	if ( m_iMaterialIndex == -1 ) // we didn't find it, so create a new one
-	{
-		m_iMaterialIndex = surface()->CreateNewTextureID();	
-		surface()->DrawSetTextureFile( m_iMaterialIndex, "hud/health_color", true, false );
-	}
+	m_iMaterialIndex = -1;
+	m_iDeadMaterialIndex = -1;
 
-	m_iDeadMaterialIndex = surface()->DrawGetTextureId( "hud/health_dead" );
-	if ( m_iDeadMaterialIndex == -1 ) // we didn't find it, so create a new one
-	{
-		m_iDeadMaterialIndex = surface()->CreateNewTextureID();	
-		surface()->DrawSetTextureFile( m_iDeadMaterialIndex, "hud/health_dead", true, false );
-	}
+	m_eHealthDirection = HEALTHDIR_DOWN;
+	m_bHealthShrink = false;
+
+	SetHealthIcon( "hud/health_color", "hud/health_dead" );
 }
 
 //-----------------------------------------------------------------------------
@@ -612,25 +608,87 @@ void CTFHealthPanel::Paint()
 	}
 	else
 	{
-		float flDamageY = h * ( 1.0f - m_flHealth );
+		float flDamage = 1.0f - m_flHealth;
+
+		int fullw = w;
+		int fullh = h;
+		int wpos = xpos + w;
+		int hpos = ypos + h;
+
+		// apply direction
+		switch ( m_eHealthDirection )
+		{
+		case HEALTHDIR_DOWN:
+		default:
+			ypos += h * flDamage;
+			break;
+		case HEALTHDIR_LEFT:
+			w *= m_flHealth;
+			wpos = xpos + w;
+			break;
+		case HEALTHDIR_UP:
+			h *= m_flHealth;
+			hpos = ypos + h;
+			break;
+		case HEALTHDIR_RIGHT:
+			xpos += w * flDamage;
+			break;
+		case HEALTHDIR_CENTER:
+			flDamage /= 2.0f;
+			w -= fullw * flDamage;
+			wpos = xpos + w;
+			h -= fullh * flDamage;
+			hpos = ypos + h;
+			xpos += fullw * flDamage;
+			ypos += fullh * flDamage;
+			break;
+		}
+
+		// scale the image if shrink is enabled, otherwise just move the uv so it gets clipped
+		float u1 = uv1;
+		float v1 = uv1;
+		float u2 = uv2;
+		float v2 = uv2;
+		if ( !m_bHealthShrink )
+		{
+			u1 = (float)xpos / fullw;
+			v1 = (float)ypos / fullh;
+			u2 = (float)wpos / fullw;
+			v2 = (float)hpos / fullh;
+		}
 
 		// blend in the red "damage" part
 		surface()->DrawSetTexture( m_iMaterialIndex );
 
-		Vector2D uv11( uv1, uv2 - m_flHealth );
-		Vector2D uv21( uv2, uv2 - m_flHealth );
-		Vector2D uv22( uv2, uv2 );
-		Vector2D uv12( uv1, uv2 );
-
-		vert[0].Init( Vector2D( xpos, flDamageY ), uv11 );
-		vert[1].Init( Vector2D( xpos + w, flDamageY ), uv21 );
-		vert[2].Init( Vector2D( xpos + w, ypos + h ), uv22 );				
-		vert[3].Init( Vector2D( xpos, ypos + h ), uv12 );
+		vert[0].Init( Vector2D( xpos, ypos ), Vector2D( u1, v1 ) );
+		vert[1].Init( Vector2D( wpos, ypos ), Vector2D( u2, v1 ) );
+		vert[2].Init( Vector2D( wpos, hpos ), Vector2D( u2, v2 ) );				
+		vert[3].Init( Vector2D( xpos, hpos ), Vector2D( u1, v2 ) );
 
 		surface()->DrawSetColor( GetFgColor() );
 	}
 
 	surface()->DrawTexturedPolygon( 4, vert );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
+void CTFHealthPanel::SetHealthIcon( const char *iconname, const char *deadiconname )
+{
+	m_iMaterialIndex = surface()->DrawGetTextureId( iconname );
+	if ( m_iMaterialIndex == -1 ) // we didn't find it, so create a new one
+	{
+		m_iMaterialIndex = surface()->CreateNewTextureID();	
+		surface()->DrawSetTextureFile( m_iMaterialIndex, iconname, true, false );
+	}
+
+	m_iDeadMaterialIndex = surface()->DrawGetTextureId( deadiconname );
+	if ( m_iDeadMaterialIndex == -1 ) // we didn't find it, so create a new one
+	{
+		m_iDeadMaterialIndex = surface()->CreateNewTextureID();	
+		surface()->DrawSetTextureFile( m_iDeadMaterialIndex, deadiconname, true, false );
+	}
 }
 
 //-----------------------------------------------------------------------------
@@ -711,6 +769,24 @@ void CTFHudPlayerHealth::Reset()
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
+void CTFHudPlayerHealth::ApplySettings( KeyValues * inResourceData )
+{
+	if ( m_pHealthImage )
+	{
+		const char *iconname = inResourceData->GetString( "HealthIcon", "hud/health_color" );
+		const char *deadiconname = inResourceData->GetString( "HealthDeadIcon", "hud/health_dead" );
+		if ( *iconname && *deadiconname )
+		{
+			m_pHealthImage->SetHealthIcon( iconname, deadiconname );
+		}
+	}
+
+	BaseClass::ApplySettings( inResourceData );
+}
+
+//-----------------------------------------------------------------------------
+// Purpose: 
+//-----------------------------------------------------------------------------
 void CTFHudPlayerHealth::ApplySchemeSettings( IScheme *pScheme )
 {
 	// load control settings...
@@ -739,6 +815,7 @@ void CTFHudPlayerHealth::SetHealth( int iNewHealth, int iMaxHealth, int	iMaxBuff
 	m_nHealth = iNewHealth;
 	m_nMaxHealth = iMaxHealth;
 	m_pHealthImage->SetHealth( (float)(m_nHealth) / (float)(m_nMaxHealth) );
+	m_pHealthImage->SetHealthDir( (HealthDirection_t)m_iHealthDirection, m_bHealthShrink );
 
 	if ( m_pHealthImage )
 	{
@@ -792,10 +869,44 @@ void CTFHudPlayerHealth::SetHealth( int iNewHealth, int iMaxHealth, int	iMaxBuff
 				int nPosAdj = RoundFloatToInt( flPercent * m_nHealthBonusPosAdj );
 				int nSizeAdj = 2 * nPosAdj;
 
-				m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX - nPosAdj, 
-					m_nBonusHealthOrigY - nPosAdj, 
-					m_nBonusHealthOrigW + nSizeAdj,
-					m_nBonusHealthOrigH + nSizeAdj );
+				switch ( m_iHealthBonusDirection )
+				{
+				case HEALTHDIR_CENTER:
+				default:
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX - nPosAdj, 
+						m_nBonusHealthOrigY - nPosAdj, 
+						m_nBonusHealthOrigW + nSizeAdj,
+						m_nBonusHealthOrigH + nSizeAdj );
+					break;
+				case HEALTHDIR_DOWN:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigH );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX,
+						m_nBonusHealthOrigY + nPosAdj,
+						m_nBonusHealthOrigW,
+						m_nBonusHealthOrigH - nPosAdj );
+					break;
+				case HEALTHDIR_LEFT:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigW );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX,
+						m_nBonusHealthOrigY,
+						m_nBonusHealthOrigW - nPosAdj,
+						m_nBonusHealthOrigH );
+					break;
+				case HEALTHDIR_UP:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigH );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX,
+						m_nBonusHealthOrigY,
+						m_nBonusHealthOrigW,
+						m_nBonusHealthOrigH - nPosAdj );
+					break;
+				case HEALTHDIR_RIGHT:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigW );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX + nPosAdj,
+						m_nBonusHealthOrigY,
+						m_nBonusHealthOrigW - nPosAdj,
+						m_nBonusHealthOrigH );
+					break;
+				}
 			}
 		}
 		// are we close to dying?
@@ -825,10 +936,44 @@ void CTFHudPlayerHealth::SetHealth( int iNewHealth, int iMaxHealth, int	iMaxBuff
 				int nPosAdj = RoundFloatToInt( flPercent * m_nHealthBonusPosAdj );
 				int nSizeAdj = 2 * nPosAdj;
 
-				m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX - nPosAdj, 
-					m_nBonusHealthOrigY - nPosAdj, 
-					m_nBonusHealthOrigW + nSizeAdj,
-					m_nBonusHealthOrigH + nSizeAdj );
+				switch ( m_iHealthDeathWarningDirection )
+				{
+				case HEALTHDIR_CENTER:
+				default:
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX - nPosAdj, 
+						m_nBonusHealthOrigY - nPosAdj, 
+						m_nBonusHealthOrigW + nSizeAdj,
+						m_nBonusHealthOrigH + nSizeAdj );
+					break;
+				case HEALTHDIR_DOWN:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigH );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX,
+						m_nBonusHealthOrigY + nPosAdj,
+						m_nBonusHealthOrigW,
+						m_nBonusHealthOrigH - nPosAdj );
+					break;
+				case HEALTHDIR_LEFT:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigW );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX,
+						m_nBonusHealthOrigY,
+						m_nBonusHealthOrigW - nPosAdj,
+						m_nBonusHealthOrigH );
+					break;
+				case HEALTHDIR_UP:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigH );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX,
+						m_nBonusHealthOrigY,
+						m_nBonusHealthOrigW,
+						m_nBonusHealthOrigH - nPosAdj );
+					break;
+				case HEALTHDIR_RIGHT:
+					nPosAdj = RoundFloatToInt( ( 1.0f - flPercent ) * m_nBonusHealthOrigW );
+					m_pHealthBonusImage->SetBounds( m_nBonusHealthOrigX + nPosAdj,
+						m_nBonusHealthOrigY,
+						m_nBonusHealthOrigW - nPosAdj,
+						m_nBonusHealthOrigH );
+					break;
+				}
 			}
 
 			if ( m_pHealthImage )
@@ -848,7 +993,8 @@ void CTFHudPlayerHealth::SetHealth( int iNewHealth, int iMaxHealth, int	iMaxBuff
 	{
 		SetDialogVariable( "Health", m_nHealth );
 
-		if ( m_nMaxHealth - m_nHealth >= 5 )
+		int iMaxHealthThreshold = tf_hud_max_health_threshold.GetInt();
+		if ( iMaxHealthThreshold < 0 || m_nMaxHealth - m_nHealth >= iMaxHealthThreshold )
 		{
 			SetDialogVariable( "MaxHealth", m_nMaxHealth );
 		}

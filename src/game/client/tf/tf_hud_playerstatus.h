@@ -88,6 +88,15 @@ private:
 	bool				m_bUsePlayerModel;
 };
 
+enum HealthDirection_t
+{
+	HEALTHDIR_DOWN = 0,
+	HEALTHDIR_LEFT = 1,
+	HEALTHDIR_UP = 2,
+	HEALTHDIR_RIGHT = 3,
+	HEALTHDIR_CENTER = 4,
+};
+
 //-----------------------------------------------------------------------------
 // Purpose:  Clips the health image to the appropriate percentage
 //-----------------------------------------------------------------------------
@@ -99,12 +108,16 @@ public:
 	CTFHealthPanel( vgui::Panel *parent, const char *name );
 	virtual void Paint();
 	void SetHealth( float flHealth ){ m_flHealth = ( flHealth <= 1.0 ) ? flHealth : 1.0f; }
+	void SetHealthDir( HealthDirection_t eHealthDirection, bool bHealthShrink ){ m_eHealthDirection = eHealthDirection; m_bHealthShrink = bHealthShrink; }
+	void SetHealthIcon( const char *iconname, const char *deadiconname );
 
 private:
 
-	float	m_flHealth; // percentage from 0.0 -> 1.0
-	int		m_iMaterialIndex;
-	int		m_iDeadMaterialIndex;
+	float				m_flHealth; // percentage from 0.0 -> 1.0
+	int					m_iMaterialIndex;
+	int					m_iDeadMaterialIndex;
+	HealthDirection_t	m_eHealthDirection;
+	bool				m_bHealthShrink;
 };
 
 enum BuffClass_t
@@ -166,6 +179,7 @@ public:
 	~CTFHudPlayerHealth();
 
 	virtual const char *GetResFilename( void ) { return "resource/UI/HudPlayerHealth.res"; }
+	virtual void ApplySettings( KeyValues *inResourceData );
 	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
 	virtual void Reset();
 
@@ -214,6 +228,10 @@ private:
 	CPanelAnimationVar( int, m_nHealthBonusPosAdj, "HealthBonusPosAdj", "25" );
 	CPanelAnimationVar( float, m_flHealthDeathWarning, "HealthDeathWarning", "0.49" );
 	CPanelAnimationVar( Color, m_clrHealthDeathWarningColor, "HealthDeathWarningColor", "HUDDeathWarning" );
+	CPanelAnimationVar( int, m_iHealthDirection, "HealthDirection", "0" );
+	CPanelAnimationVar( bool, m_bHealthShrink, "HealthShrink", "0" );
+	CPanelAnimationVar( int, m_iHealthBonusDirection, "HealthBonusDirection", "4" );
+	CPanelAnimationVar( int, m_iHealthDeathWarningDirection, "HealthDeathWarningDirection", "4" );
 
 	void UpdateHalloweenStatus( void );
 };
